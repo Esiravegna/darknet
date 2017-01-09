@@ -102,24 +102,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
         train = buffer;
         load_thread = load_data(args);
 
-        /*
-           int k;
-           for(k = 0; k < l.max_boxes; ++k){
-           box b = float_to_box(train.y.vals[10] + 1 + k*5);
-           if(!b.x) break;
-           printf("loaded: %f %f %f %f\n", b.x, b.y, b.w, b.h);
-           }
-           image im = float_to_image(448, 448, 3, train.X.vals[10]);
-           int k;
-           for(k = 0; k < l.max_boxes; ++k){
-           box b = float_to_box(train.y.vals[10] + 1 + k*5);
-           printf("%d %d %d %d\n", truth.x, truth.y, truth.w, truth.h);
-           draw_bbox(im, b, 8, 1,0,0);
-           }
-           save_image(im, "truth11");
-         */
-
-        printf("Loaded: %lf seconds\n", sec(clock()-time));
+        //printf("Loaded: %lf seconds\n", sec(clock()-time));
 
         time=clock();
         float loss = 0;
@@ -443,7 +426,6 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
     list *options = read_data_cfg(datacfg);
     char *name_list = option_find_str(options, "names", "data/names.list");
     char **names = get_labels(name_list);
-
     image **alphabet = load_alphabet();
     network net = parse_network_cfg(cfgfile);
     if(weightfile){
@@ -477,22 +459,14 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         float *X = sized.data;
         time=clock();
         network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
         get_region_boxes(l, 1, 1, thresh, probs, boxes, 0, 0, hier_thresh);
         if (l.softmax_tree && nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         else if (nms) do_nms_sort(boxes, probs, l.w*l.h*l.n, l.classes, nms);
-        draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, names, alphabet, l.classes);
-        save_image(im, "predictions");
-        show_image(im, "predictions");
-
+        print_detections(l.w*l.h*l.n, im.w, im.h, thresh, boxes, probs, names, l.classes); 
         free_image(im);
         free_image(sized);
         free(boxes);
         free_ptrs((void **)probs, l.w*l.h*l.n);
-#ifdef OPENCV
-        cvWaitKey(0);
-        cvDestroyAllWindows();
-#endif
         if (filename) break;
     }
 }

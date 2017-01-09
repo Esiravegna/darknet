@@ -8,6 +8,7 @@
 #include "avgpool_layer.h"
 #include "batchnorm_layer.h"
 #include "blas.h"
+#include "box.h"
 #include "connected_layer.h"
 #include "convolutional_layer.h"
 #include "cost_layer.h"
@@ -16,6 +17,7 @@
 #include "detection_layer.h"
 #include "dropout_layer.h"
 #include "gru_layer.h"
+#include <json/json.h>
 #include "list.h"
 #include "local_layer.h"
 #include "maxpool_layer.h"
@@ -607,10 +609,10 @@ network parse_network_cfg(char *filename)
     n = n->next;
     int count = 0;
     free_section(s);
-    fprintf(stderr, "layer     filters    size              input                output\n");
+    //fprintf(stderr, "layer     filters    size              input                output\n");
     while(n){
         params.index = count;
-        fprintf(stderr, "%5d ", count);
+        //fprintf(stderr, "%5d ", count);
         s = (section *)n->val;
         options = s->options;
         layer l = {0};
@@ -1012,7 +1014,6 @@ void load_weights_upto(network *net, char *filename, int cutoff)
         cuda_set_device(net->gpu_index);
     }
 #endif
-    fprintf(stderr, "Loading weights from %s...", filename);
     fflush(stdout);
     FILE *fp = fopen(filename, "rb");
     if(!fp) file_error(filename);
@@ -1069,7 +1070,7 @@ void load_weights_upto(network *net, char *filename, int cutoff)
 #endif
         }
     }
-    fprintf(stderr, "Done!\n");
+    ///fprintf(stderr, "Done!\n");
     fclose(fp);
 }
 
@@ -1078,3 +1079,51 @@ void load_weights(network *net, char *filename)
     load_weights_upto(net, filename, net->n);
 }
 
+
+void print_detections(int num, int width, int height, float thresh, box *boxes, float **probs, char **names, int classes)
+
+{
+    // the main container
+    json_object * joutput = json_object_new_object();
+    // The array
+    json_object * jarray = json_object_new_array();
+    int i;
+    for (i = 0; i < num; ++i) {
+        // a single detection
+        json_object * jdetection = json_object_new_object();
+
+        int class = max_index(probs[i], classes);
+        float prob = probs[i][class];
+        if (! prob > thresh) {
+            continue;
+        }
+        box b = boxes[i];
+        int left  = (b.x - b.w / 2.) * width;
+        int right = (b.x + b.w / 2.) * width;
+        int top   = (b.y - b.h / 2.) * height;
+        int bot   = (b.y + b.h / 2.) * height;
+
+        if (left < 0) left = 0;
+        if (right > width - 1) right = width - 1;
+        if (top < 0) top = 0;
+        if (bot > height - 1) bot = height - 1;
+        
+        json_object *jclass = json_object_new_string(names[class]);
+        json_object *jleft  = json_object_new_int(left);
+        json_object *jright = json_object_new_int(right);
+        json_object *jtop = json_object_new_int(top);
+        json_object *jbot = json_object_new_int(bot);
+        json_object *jprob = json_object_new_double(prob);
+
+
+        json_object_object_add(jdetection,"class", jclass);
+        json_object_object_add(jdetection,"left", jleft);
+        json_object_object_add(jdetection,"right", jright);
+        json_object_object_add(jdetection,"top", jtop);
+        json_object_object_add(jdetection,"bottom", jbot);
+        json_object_object_add(jdetection,"prob", jprob);
+        json_object_array_add(jarray, jdetection);
+    }
+    json_object_object_add(joutput,"detections", jarray);
+    printf("%s",json_object_to_json_string(joutput));
+}
