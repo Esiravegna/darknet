@@ -17,7 +17,7 @@
 image get_image_from_stream(CvCapture *cap);
 
 static char **demo_names;
-static image **demo_alphabet;
+//static image **demo_alphabet;
 static int demo_classes;
 
 static float **probs;
@@ -78,7 +78,7 @@ void *detect_in_thread(void *ptr)
     det = images[(demo_index + FRAMES/2 + 1)%FRAMES];
     demo_index = (demo_index + 1)%FRAMES;
 
-    draw_detections(det, l.w*l.h*l.n, demo_thresh, boxes, probs, demo_names, demo_alphabet, demo_classes);
+   // draw_detections(det, l.w*l.h*l.n, demo_thresh, boxes, probs, demo_names, demo_alphabet, demo_classes);
 
     return 0;
 }
@@ -95,10 +95,10 @@ double get_wall_time()
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int frame_skip, char *prefix, float hier_thresh)
 {
     //skip = frame_skip;
-    image **alphabet = load_alphabet();
+    //image **alphabet = load_alphabet();
     int delay = frame_skip;
     demo_names = names;
-    demo_alphabet = alphabet;
+    //demo_alphabet = alphabet;
     demo_classes = classes;
     demo_thresh = thresh;
     demo_hier_thresh = hier_thresh;
